@@ -98,6 +98,28 @@ class FedeAccount {
   final ValueNotifier<FedeUser?> _user = ValueNotifier(null);
   AccountBackend? _backend;
   StreamSubscription<FedeUser?>? _sub;
+  Completer<void> _ready = Completer<void>();
+
+  /// Se completa cuando Firebase ya restauró (o no) la sesión guardada: primer
+  /// evento de sesión, o a los [readyTimeout] como máximo. En web la sesión se
+  /// restaura de forma asíncrona, así que antes de esto [currentUser] puede ser
+  /// null aunque haya sesión.
+  Future<void> get ready {
+    init();
+    return _ready.future;
+  }
+
+  bool get isReady => _ready.isCompleted;
+
+  static const readyTimeout = Duration(seconds: 3);
+
+  void _markReady() {
+    _readyTimer?.cancel();
+    _readyTimer = null;
+    if (!_ready.isCompleted) _ready.complete();
+  }
+
+  Timer? _readyTimer;
 
   /// Usuario con sesión iniciada (null = sin sesión o sesión anónima).
   ValueListenable<FedeUser?> get user {
@@ -115,9 +137,14 @@ class FedeAccount {
     try {
       final b = _backend ??= FirebaseAccountBackend();
       _user.value = b.currentUser;
-      _sub = b.userChanges().listen((u) => _user.value = u);
+      _sub = b.userChanges().listen((u) {
+        _user.value = u;
+        _markReady();
+      });
+      if (!_ready.isCompleted) _readyTimer ??= Timer(readyTimeout, _markReady);
     } catch (e) {
       debugPrint('FedeAccount: sin Firebase ($e)');
+      _markReady();
     }
   }
 
@@ -145,7 +172,14 @@ class FedeAccount {
     _sub = null;
     _backend = backend;
     _user.value = null;
-    if (backend != null) init();
+    _ready = Completer<void>();
+    _readyTimer?.cancel();
+    _readyTimer = null;
+    if (backend != null) {
+      // En tests el backend ya está listo: sin espera.
+      _markReady();
+      init();
+    }
   }
 }
 

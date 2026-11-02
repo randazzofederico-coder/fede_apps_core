@@ -192,3 +192,5 @@ flutter test
 Incluyen todas las filas de la tabla de merge, purga, conflictos, convergencia (2 y 3 dispositivos
 con operaciones aleatorias) y `LibrarySync` con `InMemoryRemoteStore` (dos dispositivos, sin conexiÃ³n,
 debounce, intervalo mÃ­nimo, cierre de sesiÃ³n).
+
+> **Arranque (web):** Firebase restaura la sesión de forma asíncrona. `await FedeAccount.instance.ready` espera el primer evento de sesión (máx. 3 s). Hasta entonces `LibrarySync.canPurgeLocally` devuelve `false` (conservador).

@@ -175,8 +175,10 @@ class LibrarySync {
   }
 
   /// ¿Se puede purgar localmente esta lápida? Sí sin sesión; con sesión, solo
-  /// si ya está sincronizada (`base[id] == rev`).
+  /// si ya está sincronizada (`base[id] == rev`). Mientras la cuenta no terminó
+  /// de restaurar la sesión al arrancar ([FedeAccount.ready]), es conservador: no.
   bool canPurgeLocally(String collection, String id, int rev) {
+    if (_userOverride == null && !FedeAccount.instance.isReady) return false;
     if (_user.value == null) return true;
     if (!_baseLoaded || _uid != _user.value?.uid) return false;
     return _base[collection]?[id] == rev;
