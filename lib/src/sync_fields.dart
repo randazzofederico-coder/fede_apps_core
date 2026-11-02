@@ -18,10 +18,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// JSON viejo sin estas claves se lee como `rev: 1, deleted: false`.
 /// Las lápidas se purgan después de [tombstoneRetention] (ver [shouldPurge]).
 abstract final class SyncFields {
+  static const id = 'id';
+  static const updatedAt = 'updatedAt';
   static const rev = 'rev';
   static const deleted = 'deleted';
   static const deletedAt = 'deletedAt';
   static const device = 'dev';
+
+  /// Todas las claves de sincronización (se ignoran al comparar contenido).
+  static const all = {id, updatedAt, rev, deleted, deletedAt, device};
 
   /// Cuánto se conserva una lápida (papelera) antes de purgarla.
   static const tombstoneRetention = Duration(days: 30);
