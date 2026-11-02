@@ -1,6 +1,6 @@
 name: fede_apps_core
 description: "Código compartido de las apps de Federico Randazzo: medición de uso local, sugerencias del ecosistema (otras apps / web) y, más adelante, cuenta y sincronización."
-version: 0.2.0
+version: 0.3.0
 publish_to: 'none'
 
 environment:
