@@ -94,8 +94,13 @@ class UsageTracker {
   // ── Actividad principal ───────────────────────────────────────────────────
   /// Llamar cuando empieza la actividad principal (p. ej. el micrófono del afinador).
   /// Llamarlo dos veces seguidas no duplica nada.
-  void startActivity() {
+  ///
+  /// [continuesInBackground]: `true` si la actividad sigue con la app en segundo plano
+  /// (audio que sigue sonando: metrónomo, tone generator). Si es `false` (afinador),
+  /// el tiempo en segundo plano no se cuenta.
+  void startActivity({bool continuesInBackground = false}) {
     _pausedActivity = false;
+    _activityInBackground = continuesInBackground;
     _activitySince ??= clock();
   }
 
@@ -114,9 +119,14 @@ class UsageTracker {
     final fg = _foregroundSince;
     _foregroundSince = null;
     if (fg != null) await _add(_kForegroundSec, _elapsedSec(fg));
-    // La actividad se corta al ir a segundo plano (si sigue, se retoma al volver).
     final act = _activitySince;
-    if (act != null) {
+    if (act == null) return;
+    if (_activityInBackground) {
+      // Sigue sonando: se guarda lo acumulado (por si el sistema mata la app) y sigue contando.
+      _activitySince = clock();
+      await _add(_kActivitySec, _elapsedSec(act));
+    } else {
+      // Se corta al ir a segundo plano; si sigue activa, se retoma al volver.
       _activitySince = null;
       _pausedActivity = true;
       await _add(_kActivitySec, _elapsedSec(act));
@@ -124,6 +134,7 @@ class UsageTracker {
   }
 
   bool _pausedActivity = false;
+  bool _activityInBackground = false;
 
   Future<void> _onForeground() async {
     final now = clock();
@@ -158,6 +169,7 @@ class UsageTracker {
     _activitySince = null;
     _backgroundSince = null;
     _pausedActivity = false;
+    _activityInBackground = false;
     _sessionId = 0;
     clock = DateTime.now;
   }

@@ -21,14 +21,20 @@ dependencies:
 await UsageTracker.instance.init();
 
 // Actividad principal (afinar, reproducir):
-UsageTracker.instance.startActivity();
+UsageTracker.instance.startActivity();                             // afinador (mic)
+UsageTracker.instance.startActivity(continuesInBackground: true);  // audio que sigue sonando
 await UsageTracker.instance.stopActivity();
 
 // En un "momento tranquilo" (entrar a Ajustes, pausar el mic, detener):
 EcosystemPrompts.maybeShowAppsPrompt(context, currentApp: FedeApp.afinador);
 
-// Sección fija en Ajustes:
-const EcosystemSection(currentApp: FedeApp.afinador);
+// Sección fija en Ajustes (con encabezado propio de la app):
+EcosystemSection(
+  currentApp: FedeApp.afinador,
+  showHeader: false,               // usar FacStrings.of(context).moreApps en el header propio
+  showSite: false,                 // si Ajustes ya tiene links a la web
+  iconColor: Colors.blueAccent,    // igualar el estilo de los ListTile de la app
+);
 ```
 
 ## Qué hay

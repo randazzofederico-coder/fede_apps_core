@@ -71,6 +71,17 @@ void main() {
       expect(tracker.activitySeconds, 900 + 4 * 3600);
     });
 
+    test('actividad que sigue en segundo plano (audio)', () async {
+      tracker.startActivity(continuesInBackground: true);
+      now = now.add(const Duration(minutes: 10));
+      await tracker.debugBackground();
+      now = now.add(const Duration(minutes: 20));
+      expect(tracker.activitySeconds, 1800);
+      await tracker.debugForeground();
+      await tracker.stopActivity();
+      expect(tracker.activitySeconds, 1800);
+    });
+
     test('foreground minutes', () async {
       now = now.add(const Duration(minutes: 7));
       expect(tracker.foregroundMinutes, 7);
