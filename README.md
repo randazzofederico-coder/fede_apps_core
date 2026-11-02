@@ -44,8 +44,10 @@ EcosystemSection(
 | `UsageTracker` | Mide uso **solo en el dispositivo** (shared_preferences, claves `fac_usage_*`): aperturas, días activos, minutos en primer plano y segundos de actividad principal. |
 | `PromptGate` | Límites de frecuencia para cualquier sugerencia (claves `fac_prompt_*`): una por sesión y por día, cooldown de 14 días, máximo 3 veces; aceptada o "no volver a mostrar" la cierra. |
 | `EcosystemPrompts` | La hoja "¿Te está sirviendo…? También hice estas apps". Se muestra solo con buen uso (≥ 5 días distintos o ≥ 30 min de actividad) y nunca durante la actividad. |
-| `EcosystemSection` | Sección "Más apps" + la web para la pantalla de Ajustes. |
-| `FedeApp` | Registro de las apps (nombres, Play Store, ruta web). En Android abre la Play Store; en el resto, la versión web. |
+| `EcosystemSection` | Sección "Más apps" para Ajustes: las otras apps con su ícono real, nombre, etiqueta "Beta" y tagline (como la lista de /apps del sitio), y una fila "Ver todas en la web" que lleva a /apps. |
+| `FedeApp` | Registro de las apps (Afinador, Metrónomo, Atril, Generador de Tonos), con su ícono y los links a Play Store y a la web. **Links:** en Android, las apps públicas abren la Play Store y las beta abren su ficha en `federicorandazzo.com.ar/apps/#<id>`, donde se pide acceso como tester o, si ya lo es, aparece el botón a Google Play. En otras plataformas abren la versión web, o la ficha en /apps si no hay versión web. |
+
+> Cuando una app beta pase a producción, cambiar `beta: false` en `FedeApp`.
 
 Textos en español e inglés (cualquier otro idioma usa inglés).
 

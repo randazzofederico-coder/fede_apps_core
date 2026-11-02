@@ -1,4 +1,5 @@
 import 'package:fede_apps_core/fede_apps_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -128,6 +129,28 @@ void main() {
     });
   });
 
+  group('FedeApp links', () {
+    tearDown(() => debugDefaultTargetPlatformOverride = null);
+
+    test('Android: pública → Play Store; beta → ficha en /apps', () {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      expect(FedeApp.afinador.uri().toString(),
+          'https://play.google.com/store/apps/details?id=com.saroo.afinador');
+      expect(FedeApp.metronomo.uri().toString(),
+          'https://federicorandazzo.com.ar/apps/#metronomo');
+      expect(FedeApp.toneGenerator.uri(es: false).toString(),
+          'https://federicorandazzo.com.ar/en/apps/#tonegenerator');
+    });
+
+    test('otras plataformas: versión web o ficha en /apps', () {
+      debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+      expect(FedeApp.metronomo.uri().toString(),
+          'https://federicorandazzo.com.ar/metronomo/');
+      expect(FedeApp.atril.uri().toString(),
+          'https://federicorandazzo.com.ar/apps/#atril');
+    });
+  });
+
   group('EcosystemPrompts', () {
     test('elegibilidad', () async {
       expect(EcosystemPrompts.isEligible(), isFalse);
@@ -157,6 +180,8 @@ void main() {
       expect(find.text('Enjoying the Tuner?'), findsOneWidget);
       expect(find.text('Metronome'), findsOneWidget);
       expect(find.text('Tone Generator'), findsOneWidget);
+      expect(find.text('Atril'), findsOneWidget);
+      expect(find.text('Beta'), findsNWidgets(3));
       expect(find.text('Tuner'), findsNothing);
       expect(find.text("Don't show again"), findsNothing);
 

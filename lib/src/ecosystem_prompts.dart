@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'ecosystem_apps.dart';
+import 'ecosystem_section.dart';
 import 'prompt_gate.dart';
 import 'usage_tracker.dart';
 
@@ -100,23 +101,20 @@ class _AppsSheet extends StatelessWidget {
               child: Text(s.appsPromptBody, style: theme.textTheme.bodyMedium),
             ),
             for (final app in currentApp.others)
-              ListTile(
-                leading: Icon(app.icon),
-                title: Text(app.name(s.es)),
-                subtitle: Text(app.tagline(s.es)),
-                trailing: const Icon(Icons.open_in_new, size: 18),
+              EcosystemAppTile(
+                app: app,
                 onTap: () {
-                  openExternal(app.uri);
+                  openExternal(app.uri(es: s.es));
                   Navigator.of(context).pop(PromptResult.accepted);
                 },
               ),
             ListTile(
-              leading: const Icon(Icons.language),
-              title: Text(s.visitSite),
-              subtitle: Text(s.visitSiteSub),
+              leading: const SizedBox(width: 40, child: Icon(Icons.apps)),
+              title: Text(s.allApps),
+              subtitle: Text(s.allAppsSub),
               trailing: const Icon(Icons.open_in_new, size: 18),
               onTap: () {
-                openExternal(Uri.parse(kSiteUrl));
+                openExternal(appsPageUri(es: s.es));
                 Navigator.of(context).pop(PromptResult.accepted);
               },
             ),
