@@ -1,0 +1,19 @@
+name: fede_apps_core
+description: "Código compartido de las apps de Federico Randazzo: medición de uso local, sugerencias del ecosistema (otras apps / web) y, más adelante, cuenta y sincronización."
+version: 0.1.0
+publish_to: 'none'
+
+environment:
+  sdk: ^3.10.4
+  flutter: ">=3.38.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  shared_preferences: ^2.3.4
+  url_launcher: ^6.3.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
