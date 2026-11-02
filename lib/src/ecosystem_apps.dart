@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'account.dart';
+
 const String kSiteUrl = 'https://federicorandazzo.com.ar';
 
 /// Página de apps del sitio (con versión en inglés en /en/apps/).
@@ -140,4 +142,91 @@ class FacStrings {
   String get notNow => es ? 'Ahora no' : 'Not now';
   String get dontShowAgain => es ? 'No volver a mostrar' : "Don't show again";
   String get moreApps => es ? 'Más apps' : 'More apps';
+
+  // ── Cuenta y sincronización ───────────────────────────────────────────────
+  String get account => es ? 'Cuenta' : 'Account';
+  String get saveLibraryTitle => es ? 'Guardá tu biblioteca' : 'Save your library';
+  String get saveLibrarySub => es
+      ? 'Iniciá sesión con Google para tenerla en todos tus dispositivos'
+      : 'Sign in with Google to have it on all your devices';
+  String get ecosystemAccountTitle =>
+      es ? 'Tu cuenta del ecosistema' : 'Your ecosystem account';
+  String get ecosystemAccountSub => es
+      ? 'La misma cuenta en todas las apps y en la web'
+      : 'The same account across all apps and the website';
+  String get continueWithGoogle =>
+      es ? 'Continuar con Google' : 'Continue with Google';
+  String get syncNow => es ? 'Sincronizar ahora' : 'Sync now';
+  String get signOut => es ? 'Cerrar sesión' : 'Sign out';
+  String get signOutConfirmTitle => es ? '¿Cerrar sesión?' : 'Sign out?';
+  String signOutConfirmBody({required bool hasLibrary}) => hasLibrary
+      ? (es
+          ? 'Tu biblioteca queda en este dispositivo, pero deja de sincronizarse.'
+          : 'Your library stays on this device, but stops syncing.')
+      : (es
+          ? 'Podés volver a iniciar sesión cuando quieras.'
+          : 'You can sign in again anytime.');
+  String get cancel => es ? 'Cancelar' : 'Cancel';
+  String get syncing => es ? 'Sincronizando…' : 'Syncing…';
+  String get syncOffline => es
+      ? 'Sin conexión, se sincroniza cuando vuelva'
+      : "Offline, it'll sync when you're back online";
+  String get syncError => es ? 'No se pudo sincronizar' : "Couldn't sync";
+  String get syncPending => es ? 'Todavía no se sincronizó' : 'Not synced yet';
+
+  /// "Sincronizado hace 2 min".
+  String syncedAgo(DateTime at, DateTime now) {
+    final d = now.difference(at);
+    if (d.inMinutes < 1) return es ? 'Sincronizado recién' : 'Synced just now';
+    if (d.inMinutes < 60) {
+      return es
+          ? 'Sincronizado hace ${d.inMinutes} min'
+          : 'Synced ${d.inMinutes} min ago';
+    }
+    if (d.inHours < 24) {
+      return es ? 'Sincronizado hace ${d.inHours} h' : 'Synced ${d.inHours} h ago';
+    }
+    final days = d.inDays;
+    return es
+        ? 'Sincronizado hace $days ${days == 1 ? 'día' : 'días'}'
+        : 'Synced $days ${days == 1 ? 'day' : 'days'} ago';
+  }
+
+  String authError(FedeAuthError code) => switch (code) {
+        FedeAuthError.network => es
+            ? 'Sin conexión. Probá de nuevo cuando tengas internet.'
+            : "No connection. Try again when you're online.",
+        FedeAuthError.userDisabled =>
+          es ? 'Esta cuenta está deshabilitada.' : 'This account is disabled.',
+        FedeAuthError.configuration => es
+            ? 'No se pudo iniciar sesión con Google en este dispositivo.'
+            : "Couldn't sign in with Google on this device.",
+        FedeAuthError.popupBlocked => es
+            ? 'El navegador bloqueó la ventana de Google. Permitila y probá de nuevo.'
+            : 'The browser blocked the Google window. Allow pop-ups and try again.',
+        FedeAuthError.unknown => es
+            ? 'No se pudo iniciar sesión. Probá de nuevo.'
+            : "Couldn't sign in. Please try again.",
+      };
+
+  String get loginPromptTitle => es
+      ? '☁️ Tu biblioteca vive solo en este dispositivo'
+      : '☁️ Your library lives only on this device';
+  String get loginPromptBody => es
+      ? 'Guardala gratis para no perderla y tenerla en el celu y en la compu.'
+      : "Save it for free so you don't lose it, and have it on your phone and computer.";
+  String get whatWeSave => es ? '¿Qué guardamos?' : 'What do we save?';
+  List<String> get whatWeSaveBullets => es
+      ? const [
+          'Solo tu biblioteca y tu configuración.',
+          'Las apps siguen funcionando igual, también sin internet.',
+          'Lo que ya tenés se suma a tu cuenta: no se borra nada.',
+          'Podés borrar tu cuenta y tus datos desde Mi cuenta en la web.',
+        ]
+      : const [
+          'Only your library and your settings.',
+          'The apps keep working the same, also offline.',
+          'What you already have is added to your account: nothing gets deleted.',
+          'You can delete your account and your data from My account on the website.',
+        ];
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'account.dart';
 import 'ecosystem_apps.dart';
 import 'ecosystem_section.dart';
 import 'prompt_gate.dart';
@@ -68,6 +69,164 @@ class EcosystemPrompts {
       isScrollControlled: true,
       builder: (ctx) =>
           _AppsSheet(currentApp: currentApp, offerNever: offerNever),
+    );
+  }
+
+  static const loginPromptId = 'login';
+
+  /// Sugerencia de login ("Tu biblioteca vive solo en este dispositivo").
+  /// Solo sin sesión, con al menos [minItems] ítems en la biblioteca y
+  /// respetando [PromptGate] (id `login`). Llamarla después de guardar un ítem.
+  /// Devuelve `true` si se mostró.
+  static Future<bool> maybeShowLoginPrompt(
+    BuildContext context, {
+    required FedeApp currentApp,
+    required int libraryCount,
+    int minItems = 3,
+  }) async {
+    if (libraryCount < minItems) return false;
+    if (FedeAccount.instance.user.value != null) return false;
+    final gate = PromptGate.instance;
+    if (!gate.canShow(loginPromptId)) return false;
+    if (!context.mounted) return false;
+
+    await gate.markShown(loginPromptId);
+    if (!context.mounted) return false;
+    final result = await showLoginSheet(
+      context,
+      currentApp: currentApp,
+      offerNever: gate.shows(loginPromptId) >= 2,
+    );
+    await gate.markResult(loginPromptId, result ?? PromptResult.dismissed);
+    return true;
+  }
+
+  /// La hoja de login en sí. [PromptResult.accepted] solo si el login salió bien.
+  static Future<PromptResult?> showLoginSheet(
+    BuildContext context, {
+    required FedeApp currentApp,
+    bool offerNever = false,
+  }) {
+    return showModalBottomSheet<PromptResult>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (ctx) => _LoginSheet(offerNever: offerNever),
+    );
+  }
+}
+
+class _LoginSheet extends StatefulWidget {
+  const _LoginSheet({required this.offerNever});
+
+  final bool offerNever;
+
+  @override
+  State<_LoginSheet> createState() => _LoginSheetState();
+}
+
+class _LoginSheetState extends State<_LoginSheet> {
+  bool _busy = false;
+  String? _error;
+
+  Future<void> _signIn() async {
+    final s = FacStrings.of(context);
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      final user = await FedeAccount.instance.signInWithGoogle();
+      if (!mounted) return;
+      if (user != null) {
+        Navigator.of(context).pop(PromptResult.accepted);
+        return;
+      }
+    } on FedeAuthException catch (e) {
+      debugPrint('FedeAccount: $e');
+      if (mounted) setState(() => _error = s.authError(e.code));
+    }
+    if (mounted) setState(() => _busy = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = FacStrings.of(context);
+    final theme = Theme.of(context);
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(s.loginPromptTitle, style: theme.textTheme.titleLarge),
+            const SizedBox(height: 8),
+            Text(s.loginPromptBody, style: theme.textTheme.bodyMedium),
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              onPressed: _busy ? null : _signIn,
+              icon: _busy
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.login),
+              label: Text(s.continueWithGoogle),
+            ),
+            if (_error != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                _error!,
+                style: theme.textTheme.bodySmall
+                    ?.copyWith(color: theme.colorScheme.error),
+              ),
+            ],
+            Theme(
+              data: theme.copyWith(dividerColor: Colors.transparent),
+              child: ExpansionTile(
+                tilePadding: EdgeInsets.zero,
+                childrenPadding: const EdgeInsets.only(bottom: 8),
+                expandedCrossAxisAlignment: CrossAxisAlignment.start,
+                title: Text(s.whatWeSave, style: theme.textTheme.bodyMedium),
+                children: [
+                  for (final b in s.whatWeSaveBullets)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('•  '),
+                          Expanded(
+                              child: Text(b, style: theme.textTheme.bodySmall)),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                if (widget.offerNever)
+                  TextButton(
+                    onPressed: _busy
+                        ? null
+                        : () => Navigator.of(context).pop(PromptResult.never),
+                    child: Text(s.dontShowAgain),
+                  ),
+                TextButton(
+                  onPressed: _busy
+                      ? null
+                      : () => Navigator.of(context).pop(PromptResult.dismissed),
+                  child: Text(s.notNow),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
