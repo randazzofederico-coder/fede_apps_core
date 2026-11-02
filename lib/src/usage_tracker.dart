@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'sync_fields.dart';
+
 /// Medición de uso 100% local (shared_preferences). No manda nada a ningún servidor.
 ///
 /// Mide:
@@ -53,6 +55,7 @@ class UsageTracker {
     if (_prefs != null) return;
     _prefs = prefs ?? await SharedPreferences.getInstance();
     final p = _prefs!;
+    await DeviceIdentity.ensure(p);
     if (!p.containsKey(_kFirstOpen)) {
       await p.setString(_kFirstOpen, clock().toIso8601String());
     }

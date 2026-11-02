@@ -14,6 +14,7 @@ void main() {
   Future<void> boot() async {
     tracker.debugReset();
     gate.debugReset();
+    DeviceIdentity.debugReset();
     tracker.clock = () => now;
     await tracker.init(listenLifecycle: false);
   }
@@ -148,6 +149,49 @@ void main() {
           'https://federicorandazzo.com.ar/metronomo/');
       expect(FedeApp.atril.uri().toString(),
           'https://federicorandazzo.com.ar/apps/#atril');
+    });
+  });
+
+  group('SyncFields / DeviceIdentity', () {
+    test('JSON viejo → rev 1, sin lápida', () {
+      final j = <String, dynamic>{'id': 'a'};
+      expect(SyncFields.readRev(j), 1);
+      expect(SyncFields.readDeleted(j), isFalse);
+      expect(SyncFields.readDeletedAt(j), isNull);
+    });
+
+    test('write + read', () {
+      final at = DateTime(2026, 11, 2);
+      final j = <String, dynamic>{'id': 'a'};
+      SyncFields.write(j, rev: 3, deleted: true, deletedAt: at, device: 'd1');
+      expect(SyncFields.readRev(j), 3);
+      expect(SyncFields.readDeleted(j), isTrue);
+      expect(SyncFields.readDeletedAt(j), at);
+      expect(SyncFields.readDevice(j), 'd1');
+      final k = <String, dynamic>{};
+      SyncFields.write(k, rev: 2, deleted: false);
+      expect(k.containsKey(SyncFields.deleted), isFalse);
+    });
+
+    test('purga a los 30 días', () {
+      final at = DateTime(2026, 1, 1);
+      expect(SyncFields.shouldPurge(deleted: false, now: at), isFalse);
+      expect(
+          SyncFields.shouldPurge(
+              deleted: true, deletedAt: at, now: at.add(const Duration(days: 29))),
+          isFalse);
+      expect(
+          SyncFields.shouldPurge(
+              deleted: true, deletedAt: at, now: at.add(const Duration(days: 30))),
+          isTrue);
+    });
+
+    test('DeviceIdentity estable', () async {
+      final id = DeviceIdentity.id;
+      expect(id, isNotNull);
+      expect(id!.length, 32);
+      DeviceIdentity.debugReset();
+      expect(await DeviceIdentity.ensure(), id);
     });
   });
 
