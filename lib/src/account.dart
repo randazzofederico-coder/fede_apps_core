@@ -109,7 +109,10 @@ class FedeAccount {
     return _ready.future;
   }
 
-  bool get isReady => _ready.isCompleted;
+  bool get isReady {
+    init();
+    return _ready.isCompleted;
+  }
 
   static const readyTimeout = Duration(seconds: 3);
 
