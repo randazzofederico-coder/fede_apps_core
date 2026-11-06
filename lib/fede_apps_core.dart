@@ -12,3 +12,4 @@ export 'src/account_section.dart';
 export 'src/remote_store.dart';
 export 'src/sync_merge.dart';
 export 'src/library_sync.dart';
+export 'src/portrait_only.dart';

@@ -1,6 +1,6 @@
 name: fede_apps_core
 description: "Código compartido de las apps de Federico Randazzo: medición de uso local, sugerencias del ecosistema (otras apps / web), cuenta del ecosistema (login con Google) y sincronización de bibliotecas."
-version: 0.4.1
+version: 0.5.0
 publish_to: 'none'
 
 environment:
@@ -16,6 +16,7 @@ dependencies:
   firebase_auth: ^5.5.1
   cloud_firestore: ^5.6.5
   google_sign_in: ^6.2.2
+  web: ^1.1.0
 
 dev_dependencies:
   flutter_test:

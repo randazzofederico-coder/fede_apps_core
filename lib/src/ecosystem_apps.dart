@@ -142,6 +142,10 @@ class FacStrings {
   String get notNow => es ? 'Ahora no' : 'Not now';
   String get dontShowAgain => es ? 'No volver a mostrar' : "Don't show again";
   String get moreApps => es ? 'Más apps' : 'More apps';
+  String get rotateTitle => es ? 'Girá el teléfono' : 'Rotate your phone';
+  String get rotateBody => es
+      ? 'Por ahora la app funciona en vertical.'
+      : 'For now the app works in portrait.';
 
   // ── Cuenta y sincronización ───────────────────────────────────────────────
   String get account => es ? 'Cuenta' : 'Account';
