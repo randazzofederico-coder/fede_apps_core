@@ -142,7 +142,7 @@ class LibrarySync {
   Timer? _debounceTimer;
   Timer? _deferredTimer;
 
-  /// Prefijo de las claves en SharedPreferences (ac_sync_).
+  /// Prefijo de las claves en SharedPreferences (fac_sync_).
   final String prefsPrefix;
   String baseKey(String uid, String appId) => '${prefsPrefix}base_${uid}_$appId';
   String lastKey(String uid, String appId) => '${prefsPrefix}last_${uid}_$appId';
