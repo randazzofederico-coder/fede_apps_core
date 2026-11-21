@@ -141,6 +141,9 @@ void main() {
           'https://federicorandazzo.com.ar/apps/#metronomo');
       expect(FedeApp.toneGenerator.uri(es: false).toString(),
           'https://federicorandazzo.com.ar/en/apps/#tonegenerator');
+      expect(FedeApp.elongacionMusical.playStoreUri, isNull);
+      expect(FedeApp.elongacionMusical.uri().toString(),
+          'https://federicorandazzo.com.ar/ElMuV1/');
     });
 
     test('otras plataformas: versión web o ficha en /apps', () {
@@ -149,6 +152,9 @@ void main() {
           'https://federicorandazzo.com.ar/metronomo/');
       expect(FedeApp.atril.uri().toString(),
           'https://federicorandazzo.com.ar/apps/#atril');
+      expect(FedeApp.elongacionMusical.playStoreUri, isNull);
+      expect(FedeApp.elongacionMusical.uri().toString(),
+          'https://federicorandazzo.com.ar/ElMuV1/');
     });
   });
 
@@ -225,6 +231,7 @@ void main() {
       expect(find.text('Metronome'), findsOneWidget);
       expect(find.text('Tone Generator'), findsOneWidget);
       expect(find.text('Atril'), findsOneWidget);
+      expect(find.text('Elongación Musical'), findsOneWidget);
       expect(find.text('Beta'), findsNWidgets(3));
       expect(find.text('Tuner'), findsNothing);
       expect(find.text("Don't show again"), findsNothing);

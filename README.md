@@ -1,10 +1,10 @@
 # fede_apps_core
 
-Código compartido de las apps Flutter de federicorandazzo.com.ar (Afinador, Metrónomo, Tone Generator):
+Código compartido de las apps Flutter de federicorandazzo.com.ar (Afinador, Metrónomo, Atril, Tone Generator, Elongación Musical):
 medición de uso local, sugerencias del ecosistema (otras apps / web), cuenta del ecosistema (login con
 Google), sincronización de bibliotecas y bloqueo de rotación en la web de teléfonos.
 
-Versión actual: **0.5.1** (ver [CHANGELOG.md](CHANGELOG.md)). Repo:
+Versión actual: **0.6.0** (ver [CHANGELOG.md](CHANGELOG.md)). Repo:
 https://github.com/randazzofederico-coder/fede_apps_core
 
 ## Quién lo usa
@@ -14,6 +14,7 @@ https://github.com/randazzofederico-coder/fede_apps_core
 | **Afinador** | `UsageTracker` (mic = actividad, no sigue en segundo plano), `EcosystemPrompts.maybeShowAppsPrompt` (entrar a Ajustes, pausar el mic), `EcosystemSection`, `FedeAccount` + `AccountSection(hasLibrary: false)` (sin biblioteca, no sincroniza), `PortraitOnly`. |
 | **Metrónomo** | Todo lo anterior (actividad con `continuesInBackground: true`) + `LibrarySync` con `MetronomoSyncAdapter`, `AccountSection(hasLibrary: true)` y `maybeShowLoginPrompt`; espera `FedeAccount.instance.ready` antes de `configure`. |
 | **Tone Generator** | Igual que el Metrónomo, con `ToneSyncAdapter`. |
+| **Elongación Musical** | `UsageTracker` (audio con `continuesInBackground: true`), `EcosystemPrompts.maybeShowAppsPrompt` (entrar a Ajustes, pausar/detener reproducción), `EcosystemSection`, `FedeAccount` + `AccountSection(hasLibrary: false)` (sin sincronizar datos todavía; sin `PortraitOnly` porque el visor PDF admite horizontal). |
 
 ## Cómo se usa
 
@@ -32,7 +33,7 @@ dependencies:
 >   fede_apps_core:
 >     git:
 >       url: https://github.com/randazzofederico-coder/fede_apps_core.git
->       ref: v0.5.1
+>       ref: v0.6.0
 > ```
 >
 > Después de cambiar el paquete, correr `flutter pub get` en cada app (actualiza la versión en su `pubspec.lock`).
@@ -68,7 +69,7 @@ MaterialApp(
 
 | Pieza | Qué hace |
 | :-- | :-- |
-| `FedeApp` | Registro de las apps (Afinador, Metrónomo, Atril, Generador de Tonos), en el orden de /apps del sitio: `siteId`, nombres y taglines (es/en), `playStoreId`, `webPath`, `beta`, `iconImage` (ícono real incluido en `assets/icons/`), `uri()` y `others`. **Links según estado:** en Android, las apps públicas abren la Play Store y las beta abren su ficha en `federicorandazzo.com.ar/apps/#<id>`, donde se pide acceso como tester o, si ya lo es, aparece el botón a Google Play. En otras plataformas abren la versión web, o la ficha en /apps si no hay versión web (Atril). |
+| `FedeApp` | Registro de las apps (Afinador, Metrónomo, Atril, Generador de Tonos, Elongación Musical), en el orden de /apps del sitio: `siteId`, nombres y taglines (es/en), `playStoreId` (opcional), `webPath`, `beta`, `iconImage` (ícono real incluido en `assets/icons/`), `uri()` y `others`. **Links según estado:** en Android, las apps públicas con `playStoreId` abren la Play Store, las beta abren su ficha en `federicorandazzo.com.ar/apps/#<id>` (donde se pide acceso como tester o, si ya lo es, aparece el botón a Google Play), y las solo web (sin `playStoreId` y no beta) abren su `webPath`. En otras plataformas abren la versión web, o la ficha en /apps si no hay versión web (Atril). |
 | `appsPageUri()` / `openExternal()` | URL de /apps (o /en/apps, con ancla opcional) y apertura de links fuera de la app (nunca lanza). |
 | `FacStrings` | Textos del paquete en español e inglés (cualquier otro idioma usa inglés): `FacStrings.of(context)`. |
 | `UsageTracker` | Mide uso **solo en el dispositivo** (shared_preferences, claves `fac_usage_*`; no manda nada a ningún servidor): aperturas (arranque o vuelta tras ≥ 30 min en segundo plano), días activos, minutos en primer plano y segundos de actividad principal (`startActivity` / `stopActivity`). Tramos con tope de 4 h. `init()` también genera el `DeviceIdentity`. |

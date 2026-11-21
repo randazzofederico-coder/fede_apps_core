@@ -2,6 +2,10 @@
 
 Todas las versiones de `fede_apps_core`. Cada una tiene su tag `vX.Y.Z` en el repo.
 
+## v0.6.0 — 2026-11-21
+
+- **feat:** alta de `FedeApp.elongacionMusical` (con ícono `assets/icons/elmuvi.png`) y `playStoreId` opcional en `FedeApp`.
+
 ## v0.5.1 — 2026-11-06
 
 - **fix:** `FedeAccount.isReady` (y `ready`) inicializan la cuenta. Sin esto, si nadie había llamado a

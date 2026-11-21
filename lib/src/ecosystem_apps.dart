@@ -56,6 +56,16 @@ enum FedeApp {
     playStoreId: 'com.saroo.tone_generator',
     webPath: '/tone-generator/',
     beta: true,
+  ),
+  elongacionMusical(
+    siteId: 'elmuvi',
+    nameEs: 'Elongación Musical',
+    nameEn: 'Elongación Musical',
+    taglineEs: 'Vol. I · Gato, chacarera y escondido',
+    taglineEn: 'Vol. I · Gato, chacarera and escondido',
+    playStoreId: null,
+    webPath: '/ElMuV1/',
+    beta: false,
   );
 
   const FedeApp({
@@ -75,7 +85,7 @@ enum FedeApp {
   final String nameEn;
   final String taglineEs;
   final String taglineEn;
-  final String playStoreId;
+  final String? playStoreId;
   final String? webPath;
   final bool beta;
 
@@ -86,8 +96,9 @@ enum FedeApp {
   ImageProvider get iconImage =>
       AssetImage('assets/icons/$siteId.png', package: 'fede_apps_core');
 
-  Uri get playStoreUri =>
-      Uri.parse('https://play.google.com/store/apps/details?id=$playStoreId');
+  Uri? get playStoreUri => playStoreId == null
+      ? null
+      : Uri.parse('https://play.google.com/store/apps/details?id=$playStoreId');
 
   /// A dónde lleva tocar la app:
   /// * Android: Play Store si es pública; su ficha en /apps si es beta.
@@ -95,7 +106,9 @@ enum FedeApp {
   Uri uri({bool es = true}) {
     final android = !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
     if (android) {
-      return beta ? appsPageUri(es: es, anchor: siteId) : playStoreUri;
+      if (beta) return appsPageUri(es: es, anchor: siteId);
+      final playUri = playStoreUri;
+      if (playUri != null) return playUri;
     }
     final path = webPath;
     if (path != null) return Uri.parse('$kSiteUrl$path');
@@ -129,8 +142,12 @@ class FacStrings {
           FedeApp.metronomo => '¿Te está sirviendo el metrónomo?',
           FedeApp.atril => '¿Te está sirviendo el Atril?',
           FedeApp.toneGenerator => '¿Te está sirviendo el generador de tonos?',
+          FedeApp.elongacionMusical => '¿Te está sirviendo Elongación Musical?',
         }
-      : 'Enjoying the ${app.nameEn}?';
+      : switch (app) {
+          FedeApp.elongacionMusical => 'Enjoying Elongación Musical?',
+          _ => 'Enjoying the ${app.nameEn}?',
+        };
   String get appsPromptBody => es
       ? 'También hice estas apps, gratis:'
       : 'I also made these apps, for free:';
