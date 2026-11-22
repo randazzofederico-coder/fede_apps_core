@@ -1,20 +1,21 @@
 # fede_apps_core
 
 Código compartido de las apps Flutter de federicorandazzo.com.ar (Afinador, Metrónomo, Atril, Tone Generator, Elongación Musical):
-medición de uso local, sugerencias del ecosistema (otras apps / web), cuenta del ecosistema (login con
+medición de uso local y telemetría híbrida (`UsageTracker` + `UsageReporter`), sugerencias del ecosistema (otras apps / web), cuenta del ecosistema (login con
 Google), sincronización de bibliotecas y bloqueo de rotación en la web de teléfonos.
 
-Versión actual: **0.6.0** (ver [CHANGELOG.md](CHANGELOG.md)). Repo:
+Versión actual: **0.7.0** (ver [CHANGELOG.md](CHANGELOG.md)). Repo:
 https://github.com/randazzofederico-coder/fede_apps_core
 
 ## Quién lo usa
 
 | App | Qué usa |
 | :-- | :-- |
-| **Afinador** | `UsageTracker` (mic = actividad, no sigue en segundo plano), `EcosystemPrompts.maybeShowAppsPrompt` (entrar a Ajustes, pausar el mic), `EcosystemSection`, `FedeAccount` + `AccountSection(hasLibrary: false)` (sin biblioteca, no sincroniza), `PortraitOnly`. |
-| **Metrónomo** | Todo lo anterior (actividad con `continuesInBackground: true`) + `LibrarySync` con `MetronomoSyncAdapter`, `AccountSection(hasLibrary: true)` y `maybeShowLoginPrompt`; espera `FedeAccount.instance.ready` antes de `configure`. |
-| **Tone Generator** | Igual que el Metrónomo, con `ToneSyncAdapter`. |
-| **Elongación Musical** | `UsageTracker` (audio con `continuesInBackground: true`), `EcosystemPrompts.maybeShowAppsPrompt` (entrar a Ajustes, pausar/detener reproducción), `EcosystemSection`, `FedeAccount` + `AccountSection(hasLibrary: false)` (sin sincronizar datos todavía; sin `PortraitOnly` porque el visor PDF admite horizontal). |
+| **Afinador** | `UsageTracker` + `UsageReporter` (mic = actividad, no sigue en segundo plano), `EcosystemPrompts.maybeShowAppsPrompt` (entrar a Ajustes, pausar el mic), `EcosystemSection`, `FedeAccount` + `AccountSection(hasLibrary: false)` (sin biblioteca, no sincroniza), `PortraitOnly`. |
+| **Metrónomo** | Todo lo anterior (actividad con `continuesInBackground: true`) + `UsageReporter` (con eventos `share-create/*` y `share-import/*`) + `LibrarySync` con `MetronomoSyncAdapter`, `AccountSection(hasLibrary: true)` y `maybeShowLoginPrompt`; espera `FedeAccount.instance.ready` antes de `configure`. |
+| **Atril** | `UsageTracker` + `UsageReporter` (lectura PDF y setlist como actividad, más eventos `backup-export` y `scan-pdf`), `EcosystemPrompts`, `EcosystemSection`, `FedeAccount` + `AccountSection(hasLibrary: false)`. |
+| **Tone Generator** | Igual que el Metrónomo, con `ToneSyncAdapter` (eventos `share-create` y `share-import`). |
+| **Elongación Musical** | `UsageTracker` + `UsageReporter` (audio con `continuesInBackground: true`, más eventos `pdf-download/*`), `EcosystemPrompts.maybeShowAppsPrompt` (entrar a Ajustes, pausar/detener reproducción), `EcosystemSection`, `FedeAccount` + `AccountSection(hasLibrary: false)` (sin sincronizar datos todavía; sin `PortraitOnly` porque el visor PDF admite horizontal). |
 
 ## Cómo se usa
 
@@ -33,7 +34,7 @@ dependencies:
 >   fede_apps_core:
 >     git:
 >       url: https://github.com/randazzofederico-coder/fede_apps_core.git
->       ref: v0.6.0
+>       ref: v0.7.0
 > ```
 >
 > Después de cambiar el paquete, correr `flutter pub get` en cada app (actualiza la versión en su `pubspec.lock`).
@@ -42,6 +43,10 @@ dependencies:
 // main.dart, después de Firebase.initializeApp y antes de runApp:
 await UsageTracker.instance.init();
 FedeAccount.instance.init();                     // opcional: empieza a escuchar la sesión ya
+UsageReporter.instance.configure(                // analítica anónima GoatCounter + métricas con sesión en Firestore
+  app: FedeApp.afinador,
+  appVersion: '1.0.0+1',
+);
 
 // Actividad principal (afinar, reproducir):
 UsageTracker.instance.startActivity();                             // afinador (mic)
@@ -72,7 +77,8 @@ MaterialApp(
 | `FedeApp` | Registro de las apps (Afinador, Metrónomo, Atril, Generador de Tonos, Elongación Musical), en el orden de /apps del sitio: `siteId`, nombres y taglines (es/en), `playStoreId` (opcional), `webPath`, `beta`, `iconImage` (ícono real incluido en `assets/icons/`), `uri()` y `others`. **Links según estado:** en Android, las apps públicas con `playStoreId` abren la Play Store, las beta abren su ficha en `federicorandazzo.com.ar/apps/#<id>` (donde se pide acceso como tester o, si ya lo es, aparece el botón a Google Play), y las solo web (sin `playStoreId` y no beta) abren su `webPath`. En otras plataformas abren la versión web, o la ficha en /apps si no hay versión web (Atril). |
 | `appsPageUri()` / `openExternal()` | URL de /apps (o /en/apps, con ancla opcional) y apertura de links fuera de la app (nunca lanza). |
 | `FacStrings` | Textos del paquete en español e inglés (cualquier otro idioma usa inglés): `FacStrings.of(context)`. |
-| `UsageTracker` | Mide uso **solo en el dispositivo** (shared_preferences, claves `fac_usage_*`; no manda nada a ningún servidor): aperturas (arranque o vuelta tras ≥ 30 min en segundo plano), días activos, minutos en primer plano y segundos de actividad principal (`startActivity` / `stopActivity`). Tramos con tope de 4 h. `init()` también genera el `DeviceIdentity`. |
+| `UsageTracker` | Mide uso en el dispositivo (shared_preferences, claves `fac_usage_*`): aperturas (arranque o vuelta tras ≥ 30 min en segundo plano), días activos, minutos en primer plano y segundos de actividad principal (`startActivity` / `stopActivity`). Tramos con tope de 4 h. Expone `UsageDelta` para `UsageReporter`. `init()` también genera el `DeviceIdentity`. |
+| `UsageReporter` | Telemetría híbrida no bloqueante: **todos los usuarios** → hits anónimos (`/count`) a `https://appstats.federicorandazzo.com.ar` (apertura `/<appId>`, tramos de práctica ≥ 15 s `<appId>/practice/<bucket>` y hook opcional `trackEvent('evento')`); **usuarios con sesión** → cola local por `uid` con throttle (≥ 30 min o parada con ≥ 60 s acumulados) e incrementos atómicos en `users/{uid}/appUsage/{sourceId}` (`FirestoreUsageStore` / `InMemoryUsageStore`), con poda de `recentDays` (> 30 días). |
 | `PromptGate` | Límites de frecuencia para cualquier sugerencia (claves `fac_prompt_*`): como máximo una sugerencia por sesión y por día, cooldown de 14 días, máximo 3 veces; aceptada o "no volver a mostrar" la cierra. |
 | `EcosystemPrompts` | **Apps:** `maybeShowAppsPrompt` muestra la hoja "¿Te está sirviendo…? También hice estas apps" solo con buen uso (≥ 5 días distintos o ≥ 30 min de actividad, configurable) y nunca durante la actividad; "No volver a mostrar" aparece desde la 2.ª vez. `showAppsSheet` la abre a mano, sin límites. **Login:** `maybeShowLoginPrompt` ("Tu biblioteca vive solo en este dispositivo") solo sin sesión y con ≥ 3 ítems (`minItems`); `showLoginSheet` la abre a mano. Ids en `PromptGate`: `apps` y `login`. |
 | `EcosystemSection` | Sección "Más apps" para Ajustes, siempre visible: las otras apps + una fila "Ver todas en la web" (→ /apps). Estilo: `showHeader`, `showSite`, `iconColor`, `trailingColor`, `trailingSize`, `contentPadding`. |
@@ -215,9 +221,9 @@ gratuito. Cerrar sesión deja la biblioteca en el dispositivo y borra el `base` 
    mismo `apiKey` / `appId` que el sitio (Firebase guarda la sesión por `apiKey`); si se regenera con
    `flutterfire configure`, volver a ponerlos.
 4. `main.dart`, después de `Firebase.initializeApp(...)`: `await UsageTracker.instance.init();`,
-   `FedeAccount.instance.init();` y, si la app tiene biblioteca,
+   `FedeAccount.instance.init();`, `UsageReporter.instance.configure(app: FedeApp.miApp, appVersion: ...);` y, si la app tiene biblioteca,
    `await FedeAccount.instance.ready; await LibrarySync.instance.configure(MiAdapter());`.
-5. Actividad principal: `startActivity(...)` / `stopActivity()`.
+5. Actividad principal: `startActivity(...)` / `stopActivity()`. Opcional: `UsageReporter.instance.trackEvent('hito');`.
 6. Momentos tranquilos: `EcosystemPrompts.maybeShowAppsPrompt(context, currentApp: ...)`.
 7. Después de cada cambio local: `LibrarySync.instance.notifyLocalChange();`.
 8. En `applyRemote`, refrescar la UI y ejecutar los mismos hooks que un borrado local cuando llega
@@ -233,7 +239,7 @@ gratuito. Cerrar sesión deja la biblioteca en el dispositivo y borra el `base` 
 flutter test
 ```
 
-Incluyen `UsageTracker`, `PromptGate`, links de `FedeApp`, `SyncFields` / `DeviceIdentity`,
+Incluyen `UsageTracker`, `UsageReporter` (GoatCounter URIs, buckets, poda 30 días, offline retry, concurrencia, aislamiento entre cuentas, throttle e idempotencia), `PromptGate`, links de `FedeApp`, `SyncFields` / `DeviceIdentity`,
 `EcosystemPrompts`, todas las filas de la tabla de merge, purga, conflictos, convergencia (2 y 3
 dispositivos con operaciones aleatorias), `FedeAccount` / `AccountSection` / sugerencia de login (con
 un `AccountBackend` falso), `LibrarySync` con `InMemoryRemoteStore` (dos dispositivos, sin conexión, debounce, intervalo

@@ -2,6 +2,14 @@
 
 Todas las versiones de `fede_apps_core`. Cada una tiene su tag `vX.Y.Z` en el repo.
 
+## v0.7.0 — 2026-11-22
+
+- **feat:** `UsageTracker` ahora expone `UsageDelta`, `dayKeyOf`, `addDeltaListener` / `removeDeltaListener` manteniendo sus totales locales `fac_usage_*` intactos.
+- **feat:** nuevo `UsageReporter` + transporte multiplataforma GoatCounter (`goatcounter_stub/io/web.dart`):
+  - Capa global/anónima: envía pageviews (`/<appId>`) y eventos de práctica (`<appId>/practice/<bucket>` para tramos ≥ 15 s) + `trackEvent(name)` opcional a `https://appstats.federicorandazzo.com.ar/count`.
+  - Capa por usuario logueado: cola persistente de deltas por `uid` en `SharedPreferences`, envíos throttled con `FieldValue.increment` + `arrayUnion` hacia `users/{uid}/appUsage/{sourceId}`, reintento offline y poda automática de `recentDays` (> 30 días).
+- **docs/copy:** actualización de `FacStrings.whatWeSaveBullets` (es/en) para informar que también se guardan estadísticas básicas de uso asociadas a la cuenta.
+
 ## v0.6.0 — 2026-11-21
 
 - **feat:** alta de `FedeApp.elongacionMusical` (con ícono `assets/icons/elmuvi.png`) y `playStoreId` opcional en `FedeApp`.

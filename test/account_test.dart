@@ -189,10 +189,10 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('☁️ Your library lives only on this device'), findsOneWidget);
       expect(find.text("Don't show again"), findsNothing);
-      expect(find.text('Only your library and your settings.'), findsNothing);
+      expect(find.text('Your library, your settings, and basic usage stats (practice time and opens).'), findsNothing);
       await tester.tap(find.text('What do we save?'));
       await tester.pumpAndSettle();
-      expect(find.text('Only your library and your settings.'), findsOneWidget);
+      expect(find.text('Your library, your settings, and basic usage stats (practice time and opens).'), findsOneWidget);
 
       await tester.tap(find.text('Continue with Google'));
       await tester.pumpAndSettle();

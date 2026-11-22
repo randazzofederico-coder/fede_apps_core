@@ -239,13 +239,13 @@ class FacStrings {
   String get whatWeSave => es ? '¿Qué guardamos?' : 'What do we save?';
   List<String> get whatWeSaveBullets => es
       ? const [
-          'Solo tu biblioteca y tu configuración.',
+          'Tu biblioteca, tu configuración y estadísticas básicas de uso (tiempo de práctica y aperturas).',
           'Las apps siguen funcionando igual, también sin internet.',
           'Lo que ya tenés se suma a tu cuenta: no se borra nada.',
           'Podés borrar tu cuenta y tus datos desde Mi cuenta en la web.',
         ]
       : const [
-          'Only your library and your settings.',
+          'Your library, your settings, and basic usage stats (practice time and opens).',
           'The apps keep working the same, also offline.',
           'What you already have is added to your account: nothing gets deleted.',
           'You can delete your account and your data from My account on the website.',

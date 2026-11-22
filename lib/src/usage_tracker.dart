@@ -5,6 +5,34 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'sync_fields.dart';
 
+/// Incremento de uso local generado por un evento de [UsageTracker].
+@immutable
+class UsageDelta {
+  const UsageDelta({
+    required this.dayKey,
+    this.opens = 0,
+    this.foregroundSec = 0,
+    this.activitySec = 0,
+    this.activityStopped = false,
+    this.wentBackground = false,
+  });
+
+  /// Día calendario local (`YYYY-MM-DD`) según [UsageTracker.clock].
+  final String dayKey;
+  final int opens;
+  final int foregroundSec;
+  final int activitySec;
+  final bool activityStopped;
+  final bool wentBackground;
+
+  bool get isEmpty =>
+      opens == 0 &&
+      foregroundSec == 0 &&
+      activitySec == 0 &&
+      !activityStopped &&
+      !wentBackground;
+}
+
 /// Medición de uso 100% local (shared_preferences). No manda nada a ningún servidor.
 ///
 /// Mide:
@@ -41,6 +69,7 @@ class UsageTracker {
   DateTime? _activitySince;
   DateTime? _backgroundSince;
   int _sessionId = 0;
+  final List<void Function(UsageDelta delta)> _deltaListeners = [];
 
   bool get isReady => _prefs != null;
 
@@ -50,6 +79,24 @@ class UsageTracker {
   /// Identificador de la sesión actual (cambia en cada apertura). Lo usa [PromptGate]
   /// para no mostrar más de una sugerencia por sesión.
   int get sessionId => _sessionId;
+
+  /// Registra un listener de deltas incrementales (usado por [UsageReporter]).
+  void addDeltaListener(void Function(UsageDelta delta) listener) {
+    if (!_deltaListeners.contains(listener)) {
+      _deltaListeners.add(listener);
+    }
+  }
+
+  /// Quita un listener registrado con [addDeltaListener].
+  void removeDeltaListener(void Function(UsageDelta delta) listener) {
+    _deltaListeners.remove(listener);
+  }
+
+  /// Formato `YYYY-MM-DD` estable para agrupar días calendario locales.
+  static String dayKeyOf(DateTime d) =>
+      '${d.year.toString().padLeft(4, '0')}-'
+      '${d.month.toString().padLeft(2, '0')}-'
+      '${d.day.toString().padLeft(2, '0')}';
 
   Future<void> init({SharedPreferences? prefs, bool listenLifecycle = true}) async {
     if (_prefs != null) return;
@@ -113,27 +160,46 @@ class UsageTracker {
     final since = _activitySince;
     if (since == null) return;
     _activitySince = null;
-    await _add(_kActivitySec, _elapsedSec(since));
+    final sec = _elapsedSec(since);
+    await _add(_kActivitySec, sec);
+    _emit(UsageDelta(
+      dayKey: dayKeyOf(clock()),
+      activitySec: sec,
+      activityStopped: true,
+    ));
   }
 
   // ── Ciclo de vida ─────────────────────────────────────────────────────────
   Future<void> _onBackground() async {
     _backgroundSince = clock();
+    var fgDelta = 0;
     final fg = _foregroundSince;
     _foregroundSince = null;
-    if (fg != null) await _add(_kForegroundSec, _elapsedSec(fg));
-    final act = _activitySince;
-    if (act == null) return;
-    if (_activityInBackground) {
-      // Sigue sonando: se guarda lo acumulado (por si el sistema mata la app) y sigue contando.
-      _activitySince = clock();
-      await _add(_kActivitySec, _elapsedSec(act));
-    } else {
-      // Se corta al ir a segundo plano; si sigue activa, se retoma al volver.
-      _activitySince = null;
-      _pausedActivity = true;
-      await _add(_kActivitySec, _elapsedSec(act));
+    if (fg != null) {
+      fgDelta = _elapsedSec(fg);
+      await _add(_kForegroundSec, fgDelta);
     }
+    var actDelta = 0;
+    final act = _activitySince;
+    if (act != null) {
+      actDelta = _elapsedSec(act);
+      if (_activityInBackground) {
+        // Sigue sonando: se guarda lo acumulado (por si el sistema mata la app) y sigue contando.
+        _activitySince = clock();
+        await _add(_kActivitySec, actDelta);
+      } else {
+        // Se corta al ir a segundo plano; si sigue activa, se retoma al volver.
+        _activitySince = null;
+        _pausedActivity = true;
+        await _add(_kActivitySec, actDelta);
+      }
+    }
+    _emit(UsageDelta(
+      dayKey: dayKeyOf(clock()),
+      foregroundSec: fgDelta,
+      activitySec: actDelta,
+      wentBackground: true,
+    ));
   }
 
   bool _pausedActivity = false;
@@ -174,6 +240,7 @@ class UsageTracker {
     _pausedActivity = false;
     _activityInBackground = false;
     _sessionId = 0;
+    _deltaListeners.clear();
     clock = DateTime.now;
   }
 
@@ -182,17 +249,25 @@ class UsageTracker {
     _sessionId++;
     await _add(_kOpenCount, 1);
     await _registerDay();
+    _emit(UsageDelta(dayKey: dayKeyOf(clock()), opens: 1));
   }
 
   Future<void> _registerDay() async {
     final p = _prefs;
     if (p == null) return;
-    final now = clock();
-    final today =
-        '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+    final today = dayKeyOf(clock());
     if (p.getString(_kLastDay) != today) {
       await p.setString(_kLastDay, today);
       await _add(_kActiveDays, 1);
+    }
+  }
+
+  void _emit(UsageDelta delta) {
+    if (delta.isEmpty) return;
+    for (final listener in List<void Function(UsageDelta)>.of(_deltaListeners)) {
+      try {
+        listener(delta);
+      } catch (_) {}
     }
   }
 
