@@ -15,7 +15,7 @@ https://github.com/randazzofederico-coder/fede_apps_core
 | **Metrónomo** | Todo lo anterior (actividad con `continuesInBackground: true`) + `UsageReporter` (con eventos `share-create/*` y `share-import/*`) + `LibrarySync` con `MetronomoSyncAdapter`, `AccountSection(hasLibrary: true)` y `maybeShowLoginPrompt`; espera `FedeAccount.instance.ready` antes de `configure`. |
 | **Atril** | `UsageTracker` + `UsageReporter` (lectura PDF y setlist como actividad, más eventos `backup-export` y `scan-pdf`), `EcosystemPrompts`, `EcosystemSection`, `FedeAccount` + `AccountSection(hasLibrary: false)`. |
 | **Tone Generator** | Igual que el Metrónomo, con `ToneSyncAdapter` (eventos `share-create` y `share-import`). |
-| **Elongación Musical** | `UsageTracker` + `UsageReporter` (audio con `continuesInBackground: true`, más eventos `pdf-download/*`), `EcosystemPrompts.maybeShowAppsPrompt` (entrar a Ajustes, pausar/detener reproducción), `EcosystemSection`, `FedeAccount` + `AccountSection(hasLibrary: false)` (sin sincronizar datos todavía; sin `PortraitOnly` porque el visor PDF admite horizontal). |
+| **Elongación Musical** | `UsageTracker` + `UsageReporter` (audio con `continuesInBackground: true`, eventos `pdf-download/*` y eventos agregados `elmuvi/*`; detalle por ejercicio en `users/{uid}/elmuviPractice/summary`), `EcosystemPrompts.maybeShowAppsPrompt` (entrar a Ajustes, pausar/detener reproducción), `EcosystemSection`, `FedeAccount` + `AccountSection(hasLibrary: false)` (sin biblioteca sincronizada; sin `PortraitOnly` porque el visor PDF admite horizontal). |
 
 ## Cómo se usa
 
