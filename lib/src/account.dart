@@ -55,12 +55,15 @@ enum FedeAuthError {
   /// El navegador bloqueó la ventana de Google.
   popupBlocked,
 
+  /// Por seguridad, hace falta volver a confirmar el inicio de sesión.
+  requiresRecentLogin,
+
   /// Cualquier otro.
   unknown,
 }
 
-/// Error de [FedeAccount.signInWithGoogle]. Cancelar **no** es un error
-/// (devuelve `null`).
+/// Error de [FedeAccount.signInWithGoogle] o [FedeAccount.deleteAccount].
+/// Cancelar **no** es un error (devuelve `null` o `false`).
 class FedeAuthException implements Exception {
   const FedeAuthException(this.code, [this.detail]);
 
@@ -85,6 +88,11 @@ abstract class AccountBackend {
   Future<FedeUser?> signInWithGoogle();
 
   Future<void> signOut();
+
+  /// Elimina la cuenta y sus datos en la nube.
+  /// Devuelve `false` si el usuario canceló la re-autenticación.
+  /// Lanza [FedeAuthException] si falla.
+  Future<bool> deleteAccount();
 }
 
 /// Cuenta del ecosistema (la misma en todas las apps y en la web).
@@ -166,6 +174,19 @@ class FedeAccount {
     init();
     await _backend?.signOut();
     _user.value = null;
+  }
+
+  /// Elimina de forma permanente la cuenta del ecosistema y sus datos en la
+  /// nube (perfil, estadísticas y datos sincronizados).
+  /// Devuelve `false` si el usuario canceló la re-autenticación.
+  /// No borra la biblioteca local. Lanza [FedeAuthException] si falla.
+  Future<bool> deleteAccount() async {
+    init();
+    final b = _backend;
+    if (b == null) throw const FedeAuthException(FedeAuthError.configuration);
+    final deleted = await b.deleteAccount();
+    if (deleted) _user.value = null;
+    return deleted;
   }
 
   /// Para tests: usa otro backend.
@@ -268,16 +289,36 @@ class FirebaseAccountBackend implements AccountBackend {
       unawaited(_ensureProfile(user));
       return _map(_auth.currentUser);
     } on FirebaseAuthException catch (e) {
-      if (const {'popup-closed-by-user', 'cancelled-popup-request', 'web-context-cancelled'}
-          .contains(e.code)) {
-        return null;
-      }
-      throw FedeAuthException(_mapAuthCode(e.code), '${e.code}: ${e.message}');
+      if (_isWebCancelled(e.code)) return null;
+      _throwMappedException(e);
     } on PlatformException catch (e) {
+      if (_isNativeCancelled(e)) return null;
+      _throwMappedException(e);
+    } catch (e) {
+      _throwMappedException(e);
+    } finally {
+      _signingIn = false;
+      _controller.add(_map(_auth.currentUser));
+    }
+  }
+
+  static bool _isWebCancelled(String code) => const {
+        'popup-closed-by-user',
+        'cancelled-popup-request',
+        'web-context-cancelled',
+      }.contains(code);
+
+  static bool _isNativeCancelled(PlatformException e) {
+    final msg = '${e.code} ${e.message}';
+    return e.code == GoogleSignIn.kSignInCanceledError || msg.contains('12501');
+  }
+
+  Never _throwMappedException(Object e) {
+    if (e is FirebaseAuthException) {
+      throw FedeAuthException(_mapAuthCode(e.code), '${e.code}: ${e.message}');
+    }
+    if (e is PlatformException) {
       final msg = '${e.code} ${e.message}';
-      if (e.code == GoogleSignIn.kSignInCanceledError || msg.contains('12501')) {
-        return null;
-      }
       if (e.code == GoogleSignIn.kNetworkError || msg.contains('ApiException: 7')) {
         throw FedeAuthException(FedeAuthError.network, msg);
       }
@@ -285,18 +326,13 @@ class FirebaseAccountBackend implements AccountBackend {
         throw FedeAuthException(FedeAuthError.configuration, msg);
       }
       throw FedeAuthException(FedeAuthError.unknown, msg);
-    } on FedeAuthException {
-      rethrow;
-    } catch (e) {
-      final s = e.toString().toLowerCase();
-      if (s.contains('network') || s.contains('socket') || s.contains('host lookup')) {
-        throw FedeAuthException(FedeAuthError.network, '$e');
-      }
-      throw FedeAuthException(FedeAuthError.unknown, '$e');
-    } finally {
-      _signingIn = false;
-      _controller.add(_map(_auth.currentUser));
     }
+    if (e is FedeAuthException) throw e;
+    final s = e.toString().toLowerCase();
+    if (s.contains('network') || s.contains('socket') || s.contains('host lookup')) {
+      throw FedeAuthException(FedeAuthError.network, '$e');
+    }
+    throw FedeAuthException(FedeAuthError.unknown, '$e');
   }
 
   Future<bool> _signInWeb() async {
@@ -349,6 +385,7 @@ class FirebaseAccountBackend implements AccountBackend {
   static FedeAuthError _mapAuthCode(String code) => switch (code) {
         'network-request-failed' => FedeAuthError.network,
         'user-disabled' => FedeAuthError.userDisabled,
+        'requires-recent-login' => FedeAuthError.requiresRecentLogin,
         'popup-blocked' => FedeAuthError.popupBlocked,
         'operation-not-allowed' ||
         'unauthorized-domain' ||
@@ -357,6 +394,100 @@ class FirebaseAccountBackend implements AccountBackend {
           FedeAuthError.configuration,
         _ => FedeAuthError.unknown,
       };
+
+  @override
+  Future<bool> deleteAccount() async {
+    final user = _auth.currentUser;
+    if (user == null || user.isAnonymous) return true;
+
+    _signingIn = true;
+    try {
+      final lastSignIn = user.metadata.lastSignInTime;
+      final isStale = lastSignIn == null ||
+          DateTime.now().difference(lastSignIn) > const Duration(minutes: 4);
+      if (isStale) {
+        final ok = await _reauthenticateGoogle(user);
+        if (!ok) return false;
+      }
+
+      await _deleteFirestoreUserData(user.uid);
+
+      try {
+        await user.delete();
+      } on FirebaseAuthException catch (e) {
+        if (e.code != 'requires-recent-login') rethrow;
+        final ok = await _reauthenticateGoogle(user);
+        if (!ok) {
+          throw const FedeAuthException(FedeAuthError.requiresRecentLogin);
+        }
+        await user.delete();
+      }
+
+      if (!kIsWeb) {
+        try {
+          await _googleSignIn.signOut();
+        } catch (_) {}
+      }
+      return true;
+    } catch (e) {
+      _throwMappedException(e);
+    } finally {
+      _signingIn = false;
+      _controller.add(_map(_auth.currentUser));
+    }
+  }
+
+  Future<bool> _reauthenticateGoogle(User user) async {
+    if (kIsWeb) {
+      final provider = GoogleAuthProvider()..addScope('email');
+      try {
+        await user.reauthenticateWithPopup(provider);
+        return true;
+      } on FirebaseAuthException catch (e) {
+        if (_isWebCancelled(e.code)) return false;
+        rethrow;
+      }
+    }
+
+    try {
+      final account = await _googleSignIn.signIn();
+      if (account == null) return false;
+      final tokens = await account.authentication;
+      final credential = GoogleAuthProvider.credential(
+        accessToken: tokens.accessToken,
+        idToken: tokens.idToken,
+      );
+      await user.reauthenticateWithCredential(credential);
+      return true;
+    } on PlatformException catch (e) {
+      if (_isNativeCancelled(e)) return false;
+      rethrow;
+    }
+  }
+
+  /// Borra las subcolecciones del usuario (`appUsage`, `appData` y
+  /// `elmuviPractice`) y luego `users/{uid}`, igual que Mi cuenta en la web.
+  Future<void> _deleteFirestoreUserData(String uid) async {
+    final userDoc = _firestore.collection('users').doc(uid);
+    final snaps = await Future.wait([
+      userDoc.collection('appUsage').get(),
+      userDoc.collection('appData').get(),
+      userDoc.collection('elmuviPractice').get(),
+    ]);
+    final refs = <DocumentReference<Map<String, dynamic>>>[
+      for (final snap in snaps)
+        for (final d in snap.docs) d.reference,
+    ];
+    for (var i = 0; i < refs.length; i += 400) {
+      final batch = _firestore.batch();
+      final end = i + 400 < refs.length ? i + 400 : refs.length;
+      for (var j = i; j < end; j++) {
+        batch.delete(refs[j]);
+      }
+      await batch.commit();
+    }
+    await userDoc.delete();
+  }
 
   /// Crea `users/{uid}` con el mismo formato que el sitio, si falta.
   /// Nunca lanza: un error acá no impide el login.

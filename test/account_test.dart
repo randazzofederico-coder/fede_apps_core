@@ -14,6 +14,8 @@ class FakeBackend implements AccountBackend {
   FedeAuthException? error;
   int signIns = 0;
   int signOuts = 0;
+  int deletes = 0;
+  bool deleteResult = true;
 
   @override
   FedeUser? get currentUser => current;
@@ -35,6 +37,16 @@ class FakeBackend implements AccountBackend {
     signOuts++;
     current = null;
     _c.add(null);
+  }
+
+  @override
+  Future<bool> deleteAccount() async {
+    deletes++;
+    if (error != null) throw error!;
+    if (!deleteResult) return false;
+    current = null;
+    _c.add(null);
+    return true;
   }
 }
 
@@ -85,6 +97,19 @@ void main() {
       await FedeAccount.instance.signOut();
       expect(FedeAccount.instance.user.value, isNull);
       expect(backend.signOuts, 1);
+    });
+
+    test('deleteAccount borra usuario cuando se confirma y devuelve false si se cancela',
+        () async {
+      await FedeAccount.instance.signInWithGoogle();
+      backend.deleteResult = false;
+      expect(await FedeAccount.instance.deleteAccount(), isFalse);
+      expect(FedeAccount.instance.user.value, userA);
+
+      backend.deleteResult = true;
+      expect(await FedeAccount.instance.deleteAccount(), isTrue);
+      expect(FedeAccount.instance.user.value, isNull);
+      expect(backend.deletes, 2);
     });
 
     test('cancelar devuelve null', () async {
@@ -153,6 +178,47 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text("No connection. Try again when you're online."), findsOneWidget);
       expect(find.text('Save your library'), findsOneWidget);
+    });
+
+    testWidgets('eliminar cuenta: cancelar → confirmar → snackbar y sin sesión',
+        (tester) async {
+      backend.current = userA;
+      FedeAccount.instance.debugSetBackend(backend);
+      await tester.pumpWidget(app(AccountSection(hasLibrary: false, sync: sync)));
+
+      await tester.tap(find.text('Delete account'));
+      await tester.pumpAndSettle();
+      expect(find.text('Delete account?'), findsOneWidget);
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+      expect(backend.deletes, 0);
+      expect(find.text('Fede'), findsOneWidget);
+
+      await tester.tap(find.text('Delete account'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Delete permanently'));
+      await tester.pumpAndSettle();
+      expect(backend.deletes, 1);
+      expect(find.text('Your account has been deleted.'), findsOneWidget);
+      expect(find.text('Your ecosystem account'), findsOneWidget);
+    });
+
+    testWidgets('eliminar cuenta con error requiresRecentLogin → SnackBar',
+        (tester) async {
+      backend.current = userA;
+      FedeAccount.instance.debugSetBackend(backend);
+      await tester.pumpWidget(app(AccountSection(hasLibrary: false, sync: sync)));
+
+      backend.error = const FedeAuthException(FedeAuthError.requiresRecentLogin);
+      await tester.tap(find.text('Delete account'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Delete permanently'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('For security, please re-verify your Google account to delete it.'),
+        findsOneWidget,
+      );
+      expect(find.text('Fede'), findsOneWidget);
     });
   });
 

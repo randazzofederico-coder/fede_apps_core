@@ -187,6 +187,15 @@ class FacStrings {
       : (es
           ? 'Podés volver a iniciar sesión cuando quieras.'
           : 'You can sign in again anytime.');
+  String get deleteAccount => es ? 'Eliminar cuenta' : 'Delete account';
+  String get deleteAccountConfirmTitle =>
+      es ? '¿Eliminar cuenta?' : 'Delete account?';
+  String deleteAccountConfirmBody({required bool hasLibrary}) =>
+      '${es ? 'Se van a borrar de forma permanente tu cuenta y todos tus datos guardados en la nube (perfil, estadísticas y datos sincronizados) en todas las apps y en la web. Esta acción no se puede deshacer.' : 'This will permanently delete your account and all your cloud data (profile, stats, and synced data) across all apps and the website. This action cannot be undone.'}${hasLibrary ? (es ? ' Tu biblioteca local queda en este dispositivo.' : ' Your local library stays on this device.') : ''}';
+  String get deleteAccountConfirmAction =>
+      es ? 'Eliminar definitivamente' : 'Delete permanently';
+  String get accountDeleted =>
+      es ? 'Tu cuenta fue eliminada.' : 'Your account has been deleted.';
   String get cancel => es ? 'Cancelar' : 'Cancel';
   String get syncing => es ? 'Sincronizando…' : 'Syncing…';
   String get syncOffline => es
@@ -225,6 +234,9 @@ class FacStrings {
         FedeAuthError.popupBlocked => es
             ? 'El navegador bloqueó la ventana de Google. Permitila y probá de nuevo.'
             : 'The browser blocked the Google window. Allow pop-ups and try again.',
+        FedeAuthError.requiresRecentLogin => es
+            ? 'Por seguridad, volvé a confirmar tu cuenta de Google para eliminarla.'
+            : 'For security, please re-verify your Google account to delete it.',
         FedeAuthError.unknown => es
             ? 'No se pudo iniciar sesión. Probá de nuevo.'
             : "Couldn't sign in. Please try again.",
@@ -242,12 +254,12 @@ class FacStrings {
           'Tu biblioteca, tu configuración y estadísticas básicas de uso (tiempo de práctica y aperturas).',
           'Las apps siguen funcionando igual, también sin internet.',
           'Lo que ya tenés se suma a tu cuenta: no se borra nada.',
-          'Podés borrar tu cuenta y tus datos desde Mi cuenta en la web.',
+          'Podés borrar tu cuenta y tus datos desde Ajustes o desde Mi cuenta en la web.',
         ]
       : const [
           'Your library, your settings, and basic usage stats (practice time and opens).',
           'The apps keep working the same, also offline.',
           'What you already have is added to your account: nothing gets deleted.',
-          'You can delete your account and your data from My account on the website.',
+          'You can delete your account and your data from Settings or from My account on the website.',
         ];
 }

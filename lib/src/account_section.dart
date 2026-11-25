@@ -108,6 +108,49 @@ class _AccountSectionState extends State<AccountSection> {
     }
   }
 
+  Future<void> _deleteAccount() async {
+    final s = FacStrings.of(context);
+    final errorColor = Theme.of(context).colorScheme.error;
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(s.deleteAccountConfirmTitle),
+        content: Text(s.deleteAccountConfirmBody(hasLibrary: widget.hasLibrary)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(s.cancel),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: errorColor),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(s.deleteAccountConfirmAction),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+
+    setState(() => _busy = true);
+    try {
+      final deleted = await FedeAccount.instance.deleteAccount();
+      if (deleted) {
+        messenger?.showSnackBar(SnackBar(content: Text(s.accountDeleted)));
+      }
+    } on FedeAuthException catch (e) {
+      debugPrint('FedeAccount delete: $e');
+      messenger?.showSnackBar(SnackBar(content: Text(s.authError(e.code))));
+    } catch (e) {
+      debugPrint('FedeAccount delete: $e');
+      messenger?.showSnackBar(
+        SnackBar(content: Text(s.authError(FedeAuthError.unknown))),
+      );
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   String _statusLine(FacStrings s, SyncStatus st) => switch (st.state) {
         SyncState.syncing => s.syncing,
         SyncState.offline => s.syncOffline,
@@ -136,7 +179,7 @@ class _AccountSectionState extends State<AccountSection> {
                     ?.copyWith(color: theme.colorScheme.primary),
               ),
             ),
-          if (user == null) ..._signedOut(s) else ..._signedIn(s, user),
+          if (user == null) ..._signedOut(s) else ..._signedIn(s, user, theme),
         ],
       ),
     );
@@ -177,7 +220,7 @@ class _AccountSectionState extends State<AccountSection> {
         ),
       ];
 
-  List<Widget> _signedIn(FacStrings s, FedeUser user) {
+  List<Widget> _signedIn(FacStrings s, FedeUser user, ThemeData theme) {
     final photo = user.photoUrl;
     final initial = user.label.isEmpty ? '?' : user.label.characters.first.toUpperCase();
     final avatar = CircleAvatar(
@@ -219,18 +262,32 @@ class _AccountSectionState extends State<AccountSection> {
               child: Icon(Icons.sync, color: widget.iconColor),
             ),
             title: Text(s.syncNow),
-            enabled: st.state != SyncState.syncing,
+            enabled: !_busy && st.state != SyncState.syncing,
             onTap: () => _sync.syncNow(force: true),
           ),
         ),
       ListTile(
         contentPadding: widget.contentPadding,
+        enabled: !_busy,
         leading: SizedBox(
           width: 40,
           child: Icon(Icons.logout, color: widget.iconColor),
         ),
         title: Text(s.signOut),
         onTap: _signOut,
+      ),
+      ListTile(
+        contentPadding: widget.contentPadding,
+        enabled: !_busy,
+        leading: SizedBox(
+          width: 40,
+          child: Icon(Icons.delete_outline, color: theme.colorScheme.error),
+        ),
+        title: Text(
+          s.deleteAccount,
+          style: TextStyle(color: theme.colorScheme.error),
+        ),
+        onTap: _deleteAccount,
       ),
     ];
   }
